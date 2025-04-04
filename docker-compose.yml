@@ -1,0 +1,100 @@
+name: shiroko-discord
+services:
+  
+  rvc:
+    container_name: $RVC_HOST
+    hostname: shiroko.rvc
+    image: rvc-api
+    build:
+      context: .
+    command: -p $RVC_PORT -pi 4
+    ports:
+      - $RVC_PORT:$RVC_PORT
+    networks: [ shiroko-net ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  queue:
+    container_name: $RABBITMQ_HOST
+    hostname: shiroko.rabbit
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: $RABBITMQ_USER
+      RABBITMQ_DEFAULT_PASS: $RABBITMQ_PASSWORD
+      RABBITMQ_NODE_PORT: $RABBITMQ_PORT
+    ports:
+      - $RABBITMQ_PORT:$RABBITMQ_PORT
+      - '15672:15672'
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+    volumes:
+      - rabbitmq_volume:/var/lib/rabbitmq
+    networks: [shiroko-net]
+
+  bot:
+    container_name: shiroko-bot
+    restart: always
+    hostname: shiroko.bot
+    build:
+      target: backend
+      context: .
+    volumes:
+      - .:/app
+    ports:
+      - $DEBUGGER_PORT:$DEBUGGER_PORT
+      - $PORT:$PORT
+    networks: [shiroko-net]
+    environment:
+      TZ: $TZ
+    
+    
+    depends_on:
+      - database
+      - storage
+      - rvc
+
+  database:
+    image: mongo
+    hostname: shiroko.db
+    container_name: $DB_HOST
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: $DB_USER
+      MONGO_INITDB_ROOT_PASSWORD: $DB_PASSWORD
+      TZ: $TZ
+    ports:
+      - $DB_PORT:$DB_PORT
+    volumes:
+      - mongo_volume:/data/db
+    networks: [shiroko-net]
+  storage:
+    hostname: shiroko.minio
+    image: minio/minio
+    command: server /data --console-address ":$MINIO_WEBUI_PORT"
+    container_name: $MINIO_HOST
+    environment:
+      MINIO_ROOT_USER: $MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD: $MINIO_ROOT_PASSWORD
+      TZ: $TZ
+    networks:
+      - shiroko-net
+    volumes:
+      - minio_volume:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+      
+
+volumes:
+  mongo_volume:
+    name: shiroko_db
+  minio_volume:
+    name: shiroko_minio
+  rabbitmq_volume:
+    name: shiroko_rabbitmq
+networks:
+  shiroko-net:
+    name: shiroko-net
