@@ -37,8 +37,7 @@ class OpenAITTSService(ChatGPT):
         if not(self._voice_exists()):
             raise RuntimeError(f'The specific voice {self.voice} does not exists')
         
-        super().__init__(model)
-        
+        super().__init__(model=model,logger=logger)
             
         self.STREAM_CHUNK=STREAM_CHUNK
         self.speed=speed

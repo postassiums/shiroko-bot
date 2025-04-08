@@ -11,13 +11,13 @@ services:
     ports:
       - $RVC_PORT:$RVC_PORT
     networks: [ shiroko-net ]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
   queue:
     container_name: $RABBITMQ_HOST
     hostname: shiroko.rabbit
@@ -61,6 +61,7 @@ services:
     image: mongo
     hostname: shiroko.db
     container_name: $DB_HOST
+    command: --port $DB_PORT
     environment:
       MONGO_INITDB_ROOT_USERNAME: $DB_USER
       MONGO_INITDB_ROOT_PASSWORD: $DB_PASSWORD
