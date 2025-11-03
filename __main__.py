@@ -25,7 +25,7 @@ tts=EdgeTTSService()
 db=Database()
 rvc_service=AsyncRVCService(logger=logger)
 shiroko_voice_service=ShirokoVoiceService(tts_service=tts,rvc_service=rvc_service,logger=logger)
-pdf_service=ShirokoPDFReader(shiroko_voice=shiroko_voice_service)
+pdf_service=ShirokoPDFReader(shiroko_voice=shiroko_voice_service,logger=logger)
 client=DiscordBot(intents=intents, logger=logger, llm=llm, tts=tts, db=db,shiroko_voice=shiroko_voice_service,pdf_service=pdf_service)
 
 

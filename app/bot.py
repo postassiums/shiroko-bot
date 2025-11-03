@@ -33,7 +33,8 @@ class DiscordBot(commands.Bot):
     async def _send_pdf_result(self,result : tuple[str,bytes] ,interaction : discord.Interaction):
         for file_name, audio in result:
             message_content = f'FILE: {file_name} \n'
-            await interaction.response.send_message(file=audio, content=message_content, ephemeral=True)
+            audio_file=discord.File(fp=io.BytesIO(audio),filename=f'{uuid.uuid4()}.wav')
+            await interaction.followup.send(file=audio_file, content=message_content, ephemeral=True)
 
 
     async def _convert_pdf_attachments_to_audio(self, messages_with_attachemnts,interaction : discord.Interaction):
@@ -112,10 +113,12 @@ class DiscordBot(commands.Bot):
 
         @self.tree.command(description='Transcribe PDF Files',name='read')
         async def read_pdf(interaction : discord.Interaction):
+            await interaction.response.defer(ephemeral=True,thinking=True)
             last_messages = [m async for m in interaction.channel.history(limit=self.PDF_FILE_READ_LIMIT)]
             messages_with_attachments=ShirokoPDFReader.filter_messages_with_attachments(last_messages)
             if messages_with_attachments.__len__()==0:
-                await interaction.response.send_message(content='No PDF Files were provied')
+                
+                await interaction.followup.send(content='No PDF Files were provied')
                 return
             attachments=ShirokoPDFReader.get_attachments_from_messages(messages_with_attachments)
             attachments=ShirokoPDFReader.filter_pdf_attachments(attachments)
@@ -123,14 +126,14 @@ class DiscordBot(commands.Bot):
                 async with interaction.channel.typing():
 
                     message_content=f"TRANSCRIBING LAST {attachments.__len__()} FILES:"
-                    sent_message=await interaction.response.send_message(content=message_content, ephemeral=True)
                     result=await self.pdf_service.pdfs_to_audio(attachments)
                     #await Conversation.create_chatbot_conversation(sent_message,f"PAGE {page}:\n" + to_be_read_text)
                     await self._send_pdf_result(result,interaction)
+                    await interaction.followup.send(content='Finished to read PDF file',ephemeral=True)
 
             except Exception as e:
-                self.logger.critical(e)
-                await interaction.response.send_message(content="Failed to read the provided PDF files",ephemeral=True)
+                self.logger.critical(e,exc_info=True)
+                await interaction.followup.send(content="Failed to read the provided PDF files",ephemeral=True)
 
 
 
